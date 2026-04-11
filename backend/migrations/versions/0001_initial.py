@@ -17,7 +17,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ── profiles ──────────────────────────────────────────────────────────────
     op.create_table(
         "profiles",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -35,13 +34,6 @@ def upgrade() -> None:
     op.create_index("ix_profiles_id", "profiles", ["id"])
     op.create_index("ix_profiles_name", "profiles", ["name"], unique=True)
 
-    # ── call_status enum ──────────────────────────────────────────────────────
-    call_status_enum = postgresql.ENUM(
-        "success", "error", "timeout", name="callstatus", create_type=True
-    )
-    call_status_enum.create(op.get_bind())
-
-    # ── llm_call_logs ─────────────────────────────────────────────────────────
     op.create_table(
         "llm_call_logs",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -49,8 +41,7 @@ def upgrade() -> None:
                   sa.ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True),
         sa.Column("prompt", sa.Text(), nullable=False),
         sa.Column("response", sa.Text(), nullable=True),
-        sa.Column("status", sa.Enum("success", "error", "timeout", name="callstatus"),
-                  nullable=False, server_default="success"),
+        sa.Column("status", sa.Text(), nullable=False, server_default="success"),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("prompt_tokens", sa.Integer(), nullable=True),
         sa.Column("completion_tokens", sa.Integer(), nullable=True),
@@ -68,7 +59,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index("ix_llm_call_logs_profile_id", "llm_call_logs")
+    op.drop_index("ix_llm_call_logs_id", "llm_call_logs")
     op.drop_table("llm_call_logs")
     op.drop_index("ix_profiles_name", "profiles")
+    op.drop_index("ix_profiles_id", "profiles")
     op.drop_table("profiles")
-    op.execute("DROP TYPE IF EXISTS callstatus")
