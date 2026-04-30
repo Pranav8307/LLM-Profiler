@@ -31,8 +31,8 @@ class LLMCallLogResponse(BaseModel):
     prompt_tokens: Optional[int]
     completion_tokens: Optional[int]
     total_tokens: Optional[int]
+    cost: Optional[float] = 0
     latency_ms: Optional[float]
-    estimated_cost_usd: Optional[float]
     metadata_: Optional[Dict[str, Any]] = Field(None, alias="metadata")
     created_at: datetime
     updated_at: datetime
