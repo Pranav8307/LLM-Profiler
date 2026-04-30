@@ -4,9 +4,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging, get_logger
-from app.core.exceptions import register_exception_handlers   # ← add this
+from app.core.exceptions import register_exception_handlers
 from app.api.v1.router import api_router
 
+from app.db.session import engine
+import app.db.init_db  # 👈 registers models
+from app.db.base import Base
+
+
+# ✅ DEFINE SETTINGS FIRST
 settings = get_settings()
 setup_logging()
 logger = get_logger(__name__)
@@ -15,7 +21,14 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.app_name} v{settings.app_version} [{settings.app_env}]")
+
+    # ✅ create tables
+    Base.metadata.create_all(bind=engine)
+
+    print("Tables:", Base.metadata.tables.keys())  # debug
+
     yield
+
     logger.info("Shutting down...")
 
 
@@ -38,7 +51,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix="/api/v1")
-    register_exception_handlers(app)   # ← add this
+    register_exception_handlers(app)
 
     return app
 
