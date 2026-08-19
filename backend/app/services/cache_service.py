@@ -3,6 +3,7 @@
 import redis
 import json
 import os
+import hashlib
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -19,4 +20,8 @@ class CacheService:
         self.client.setex(key, ttl, json.dumps(value))
 
     def make_key(self, prompt: str, model: str):
-        return f"llm:{model}:{hash(prompt)}"
+        # hashlib gives a deterministic digest across processes/workers/restarts.
+        # Python's built-in hash() is randomized per-process by default (PYTHONHASHSEED)
+        # and would silently break cache hits across multiple uvicorn workers.
+        digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+        return f"llm:{model}:{digest}"

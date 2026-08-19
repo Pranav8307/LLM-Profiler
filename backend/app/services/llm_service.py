@@ -28,6 +28,7 @@ class LLMService:
 
     def generate(self, prompt: str) -> Dict:
         start = time.time()
+        pricing = MODEL_PRICING.get(self.model, {"input": 0, "output": 0})
 
         try:
             completion = self.client.chat.completions.create(
@@ -40,6 +41,11 @@ class LLMService:
             completion_tokens = completion.usage.completion_tokens
             tokens = completion.usage.total_tokens
 
+            cost = round(
+                prompt_tokens * pricing["input"] + completion_tokens * pricing["output"],
+                6,
+            )
+
         except Exception as e:
             print("GROQ ERROR:", repr(e))
 
@@ -49,17 +55,9 @@ class LLMService:
 
         latency = round((time.time() - start) * 1000, 2)
 
-        pricing = MODEL_PRICING.get(self.model, {"input": 0, "output": 0})
-
-        cost = (
-            prompt_tokens * pricing["input"] +
-            completion_tokens * pricing["output"]
-        )
-        cost = round(cost, 6)
-
         return {
             "answer": answer,
             "latency_ms": latency,
             "tokens": tokens,
-            "cost": round(cost, 6) if cost else 0.0
+            "cost": cost,
         }
